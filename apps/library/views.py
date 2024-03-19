@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -47,12 +48,12 @@ class VisitorViewSet(viewsets.ModelViewSet):
             data=request.data)
 
         if serializer.is_valid(raise_exception=True):
-            book = serializer.validated_data.get('book')
-            book.quantity -= 1
-            book.save()
-            visitor.borrowed_books.add(book)
-            visitor.save()
-
+            with transaction.atomic():
+                book = serializer.validated_data.get('book')
+                book.quantity -= 1
+                book.save()
+                visitor.borrowed_books.add(book)
+                visitor.save()
             return Response({'success': f'Books {book} borrowed by {visitor.name}'}, status=status.HTTP_200_OK)
 
     @extend_schema(request=serializers.VisitorReturnBooksSerializer)
@@ -64,9 +65,10 @@ class VisitorViewSet(viewsets.ModelViewSet):
             context={'visitor': visitor})
 
         if serializer.is_valid(raise_exception=True):
-            book = serializer.validated_data.get('book')
-            book.quantity += 1
-            book.save()
-            visitor.borrowed_books.remove(book)
+            with transaction.atomic():
+                book = serializer.validated_data.get('book')
+                book.quantity += 1
+                book.save()
+                visitor.borrowed_books.remove(book)
 
             return Response({'success': f'Books "{book}" returned by {visitor.name}'}, status=status.HTTP_200_OK)
