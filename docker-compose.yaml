@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # Контейнер для Gunicorn (WSGI)
+  wsgi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      sh -c "python manage.py collectstatic --noinput &&
+             python manage.py makemigrations &&
+             python manage.py migrate &&
+             python manage.py loaddata fixtures/dump.json &&
+             gunicorn swarmica.wsgi:application --bind 0.0.0.0:8006 --access-logfile -"
+    restart: always
+    volumes:
+      - static_value:/swarmica/static/
+      - ./media:/swarmica/media/
+    ports:
+      - "8006:8006"
+    depends_on:
+      - db
+    env_file:
+      - .env_docker
+
+  db:
+    image: postgres:alpine
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    #    volumes:
+    #      - pg_data:/var/lib/postgresql/data/
+    ports:
+      - "8009:5432"
+
+  # Контейнер для NGINX
+  nginx:
+    image: nginx:1.21.3-alpine
+    ports:
+      # - "80:80"
+      - "85:85"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - static_value:/var/html/static/
+      # - media_value:/var/html/media/
+
+    restart: always
+    depends_on:
+      - wsgi
+
+volumes:
+  static_value:
+
+

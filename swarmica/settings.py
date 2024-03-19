@@ -1,35 +1,31 @@
 import os
 import environ
-import yaml
 from pathlib import Path
-
-env = environ.Env(
-    DEBUG=int,
-    SECRET_KEY=str,
-
-    POSTGRES_DB=str,
-    POSTGRES_USER=str,
-    POSTGRES_PASSWORD=str,
-    DATABASE_HOST=str,
-    DATABASE_PORT=str,
-
-    DEFAULT_DATABASE_CONFIG=str
-)
-
-
-def read_config_from_file(filename):
-    with open(filename, 'r') as f:
-        config = yaml.safe_load(f)
-    return config
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = env('SECRET_KEY')
+
+env = environ.Env(
+    DEBUG=(bool, False),
+    SECRET_KEY=(str),
+
+    DATABASE_NAME=(str),
+    DATABASE_USER=(str),
+    DATABASE_PASSWORD=(str),
+    DATABASE_HOST=(str),
+    DATABASE_PORT=(str),
+
+    HTTP_READ_TIMEOUT=(int, 30),
+    HTTP_WRITE_TIMEOUT=(int, 15),
+)
+
+# SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = "adkwddfnipawdnfp;qljwkdnfl;jwenf"
 
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -79,20 +75,17 @@ WSGI_APPLICATION = 'swarmica.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DEFAULT_DATABASE_CONFIG = env('DEFAULT_DATABASE_CONFIG')
-
-if DEFAULT_DATABASE_CONFIG:
-    DEFAULT_DATABASE = read_config_from_file(DEFAULT_DATABASE_CONFIG)
-else:
-    DEFAULT_DATABASE = {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR + '/db.sqlite3'
-    }
 
 DATABASES = {
-    'default': DEFAULT_DATABASE,
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': env('DATABASE_NAME'),
+        'USER': env('DATABASE_USER'),
+        'PASSWORD': env('DATABASE_PASSWORD'),
+        'HOST': env('DATABASE_HOST'),
+        'PORT': env('DATABASE_PORT'),
+    }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -128,6 +121,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
@@ -152,4 +147,15 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
 
     "SCHEMA_PATH_PREFIX": "/api/",
+}
+
+# Gunicorn
+HTTP_READ_TIMEOUT = env('HTTP_READ_TIMEOUT')
+HTTP_WRITE_TIMEOUT = env('HTTP_WRITE_TIMEOUT')
+
+GUNICORN_SETTINGS = {
+    'bind': '0.0.0.0:8000',
+    'workers': 3,
+    'timeout': HTTP_READ_TIMEOUT,
+    'keepalive': HTTP_WRITE_TIMEOUT,
 }

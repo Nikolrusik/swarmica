@@ -11,6 +11,9 @@ class BookFilter(FilterSet):
         fields = ('author__name', 'year', 'department__name', 'is_available',)
 
     def filter_is_available(self, queryset, name, value):
-        if value:
-            queryset.filter(quantity_gt=0)
-        return value
+        if value is not None:
+            if value:
+                return queryset.filter(quantity__gt=0)
+            return queryset.filter(quantity=0)
+
+        return queryset
